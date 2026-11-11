@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0a0a0a">
+    <title>Stack - Medya, Proje ve Günlük Takip</title>
+    <link href="tailwind.css" rel="stylesheet">
+    <link href="fa/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #121212; color: #e5e5e5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-dark min-h-screen pb-20">
+
+    <!-- Giriş Ekranı (Sadece Kullanıcı Adı) -->
+    <div id="auth-screen" class="fixed inset-0 bg-dark z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-card w-full max-w-sm rounded-2xl p-6 shadow-2xl border border-gray-800 text-center">
+            <h1 class="text-3xl font-black text-white tracking-wider mb-2">STACK</h1>
+            <p class="text-sm text-gray-400 mb-6">Kişisel arşivine hoş geldin. Başlamak için bir kullanıcı adı belirle.</p>
+            
+            <form id="auth-form" class="flex flex-col gap-4">
+                <input type="text" id="username-input" placeholder="Kullanıcı Adı (Örn: urg4n)" required class="w-full bg-dark border border-gray-700 rounded-xl p-3 text-white text-center focus:outline-none focus:border-primary text-sm">
+                <button type="submit" class="w-full bg-primary hover:bg-blue-600 text-white font-medium p-3 rounded-xl transition text-sm">Girişe Başla</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Hedefler Modalı -->
+    <div id="goals-modal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50 p-4">
+        <div class="bg-card w-full max-w-2xl rounded-xl p-5 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4 border-b border-gray-800 pb-3">
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fas fa-bullseye text-primary"></i> Hedefler Arşivi
+                </h2>
+                <div class="flex items-center gap-2">
+                    <button onclick="openGoalAddModal()" class="bg-primary hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5">
+                        <i class="fas fa-plus"></i> Hedef Ekle
+                    </button>
+                    <button onclick="closeGoalsModal()" class="text-gray-400 hover:text-white p-1.5"><i class="fas fa-times text-base"></i></button>
+                </div>
+            </div>
+            
+            <div class="flex flex-col gap-3 text-sm text-gray-300" id="goals-list-container"></div>
+            
+            <div class="mt-4 text-right pt-3 border-t border-gray-800">
+                <button onclick="closeGoalsModal()" class="px-4 py-2 rounded bg-gray-800 text-gray-300 hover:bg-gray-700 transition text-sm">Kapat</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Yeni Hedef Grubu Ekleme Modalı -->
+    <div id="goal-add-modal" class="fixed inset-0 bg-black bg-opacity-80 hidden items-center justify-center z-50 p-4">
+        <div class="bg-card w-full max-w-md rounded-xl p-5 shadow-2xl max-h-[90vh] overflow-y-auto border border-gray-800">
+            <div class="flex justify-between items-center mb-4 border-b border-gray-800 pb-3">
+                <h2 class="text-lg font-bold text-white">Yeni Hedef Grubu Ekle</h2>
+                <button onclick="closeGoalAddModal()" class="text-gray-400 hover:text-white"><i class="fas fa-times"></i></button>
+            </div>
+
+            <form id="goal-custom-form" class="flex flex-col gap-3">
+                <div>
+                    <label class="text-xs text-gray-400 mb-1 block">1. Yıl Seçimi</label>
+                    <input type="text" id="g-year" placeholder="Örn: 2026" required class="w-full bg-dark border border-gray-700 rounded p-2.5 text-white text-sm focus:outline-none focus:border-primary">
+                </div>
+
+                <div>
+                    <label class="text-xs text-gray-400 mb-1 block">2. Yıl İçin Başlık / Tema Koyma</label>
+                    <input type="text" id="g-title" placeholder="Örn: Yazılım ve Eğitim Yılı" required class="w-full bg-dark border border-gray-700 rounded p-2.5 text-white text-sm focus:outline-none focus:border-primary">
+                </div>
+
+                <div class="flex justify-end gap-2 mt-2">
+                    <button type="button" onclick="closeGoalAddModal()" class="px-4 py-2 rounded text-gray-300 hover:bg-gray-800 transition text-sm">İptal</button>
+                    <button type="submit" class="px-4 py-2 rounded bg-primary text-white hover:bg-blue-600 transition text-sm">Hedef Grubunu Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Günlük Takvim Modalı -->
+    <div id="journal-modal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50 p-4">
+        <div class="bg-card w-full max-w-3xl rounded-xl p-5 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4 border-b border-gray-800 pb-3">
+                <div class="flex items-center gap-3">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fas fa-calendar-alt text-primary"></i> Günlük Takvimi
+                    </h2>
+                    <div class="flex items-center gap-1 bg-darker px-2 py-1 rounded-lg border border-gray-800 text-xs">
+                        <button onclick="changeMonth(-1)" class="text-gray-400 hover:text-white px-2 py-0.5"><i class="fas fa-chevron-left"></i></button>
+                        <span id="calendar-month-year" class="font-bold text-white px-2">Ocak 2026</span>
+                        <button onclick="changeMonth(1)" class="text-gray-400 hover:text-white px-2 py-0.5"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                </div>
+                <button onclick="closeJournalModal()" class="text-gray-400 hover:text-white p-1.5"><i class="fas fa-times text-base"></i></button>
+            </div>
+            
+            <div class="bg-darker p-3 rounded-xl border border-gray-800">
+                <div class="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-gray-400 mb-2">
+                    <div>Pzt</div><div>Sal</div><div>Çar</div><div>Per</div><div>Cum</div><div>Cmt</div><div>Paz</div>
+                </div>
+                <div id="calendar-grid" class="grid grid-cols-7 gap-1.5"></div>
+            </div>
+            
+            <div class="mt-4 text-right pt-3 border-t border-gray-800">
+                <button onclick="closeJournalModal()" class="px-4 py-2 rounded bg-gray-800 text-gray-300 hover:bg-gray-700 transition text-sm">Kapat</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Günlük Detay Modalı -->
+    <div id="journal-view-modal" class="fixed inset-0 bg-black bg-opacity-80 hidden items-center justify-center z-50 p-4">
+        <div class="bg-card w-full max-w-lg rounded-xl p-5 shadow-2xl max-h-[90vh] overflow-y-auto border border-gray-800">
+            <div class="flex justify-between items-center mb-3 border-b border-gray-800 pb-2">
+                <span id="view-j-date" class="text-xs bg-blue-500/20 text-primary px-2.5 py-1 rounded font-medium"></span>
+                <button onclick="closeJournalViewModal()" class="text-gray-400 hover:text-white"><i class="fas fa-times"></i></button>
+            </div>
+            <h3 id="view-j-title" class="text-lg font-bold text-white mb-3"></h3>
+            <div class="bg-dark p-3.5 rounded-lg border border-gray-800 text-xs text-gray-300 whitespace-pre-wrap leading-relaxed max-h-[50vh] overflow-y-auto mb-4" id="view-j-notes"></div>
+            <div class="flex justify-between items-center pt-2 border-t border-gray-800">
+                <button id="delete-journal-btn" onclick="" class="text-red-400 hover:text-red-300 text-xs flex items-center gap-1"><i class="fas fa-trash-alt"></i> Günlüğü Sil</button>
+                <button onclick="closeJournalViewModal()" class="px-3 py-1.5 rounded bg-gray-800 text-gray-300 hover:bg-gray-700 text-xs">Kapat</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Günlük Ekleme Formu Modalı -->
+    <div id="journal-add-modal" class="fixed inset-0 bg-black bg-opacity-80 hidden items-center justify-center z-50 p-4">
+        <div class="bg-card w-full max-w-md rounded-xl p-5 shadow-2xl max-h-[90vh] overflow-y-auto border border-gray-800">
+            <div class="flex justify-between items-center mb-4 border-b border-gray-800 pb-3">
+                <h2 id="journal-add-title" class="text-lg font-bold text-white">Günlük Ekle</h2>
+                <button onclick="closeJournalAddModal()" class="text-gray-400 hover:text-white"><i class="fas fa-times"></i></button>
+            </div>
+
+            <form id="journal-custom-form" class="flex flex-col gap-3">
+                <div>
+                    <label class="text-xs text-gray-400 mb-1 block">Tarih</label>
+                    <input type="date" id="j-date" required readonly class="w-full bg-dark border border-gray-700 rounded p-2.5 text-white text-sm opacity-70 cursor-not-allowed">
+                </div>
+
+                <div>
+                    <label class="text-xs text-gray-400 mb-1 block">Başlık</label>
+                    <input type="text" id="j-title" placeholder="Günlük başlığı..." required class="w-full bg-dark border border-gray-700 rounded p-2.5 text-white text-sm focus:outline-none focus:border-primary">
+                </div>
+
+                <div>
+                    <label class="text-xs text-gray-400 mb-1 block">Notlar (Karakter Sınırı Yoktur)</label>
+                    <textarea id="j-notes" placeholder="Bugün neler yaptın..." rows="6" required class="w-full bg-dark border border-gray-700 rounded p-2.5 text-white text-sm focus:outline-none focus:border-primary resize-y"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-2 mt-2">
+                    <button type="button" onclick="closeJournalAddModal()" class="px-4 py-2 rounded text-gray-300 hover:bg-gray-800 transition text-sm">İptal</button>
+                    <button type="submit" class="px-4 py-2 rounded bg-primary text-white hover:bg-blue-600 transition text-sm">Günlüğü Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Üst Menü -->
+    <header class="bg-darker p-4 sticky top-0 z-10 shadow-md flex justify-between items-center">
+        <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-2xl font-bold text-white tracking-wider mr-2">STACK</h1>
+            <button onclick="openGoalsModal()" class="flex items-center gap-1.5 bg-gray-800 hover:bg-gray-700 text-primary border border-gray-700 px-3 py-1.5 rounded-full text-xs font-semibold transition shadow-sm">
+                <i class="fas fa-bullseye"></i> Hedefler
+            </button>
+            <button onclick="openJournalModal()" class="flex items-center gap-1.5 bg-gray-800 hover:bg-gray-700 text-primary border border-gray-700 px-3 py-1.5 rounded-full text-xs font-semibold transition shadow-sm">
+                <i class="fas fa-calendar-alt"></i> Günlük
+            </button>
+            <span id="user-display" class="text-xs bg-gray-800 text-gray-300 px-2.5 py-1 rounded-full border border-gray-700 hidden"></span>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="logout()" title="Çıkış Yap" class="text-gray-400 hover:text-red-400 p-2 text-sm transition"><i class="fas fa-right-from-bracket"></i></button>
+            <button onclick="openModal()" class="bg-primary hover:bg-blue-600 text-white p-2 rounded-full w-10 h-10 flex items-center justify-center transition shadow-lg">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Kategoriler (Dikey) -->
+    <div class="px-4 py-3 bg-darker border-b border-gray-800">
+        <h2 class="text-xs text-gray-400 uppercase tracking-wider mb-2 font-semibold">Kategoriler</h2>
+        <div class="flex flex-col gap-2" id="category-filters"></div>
+    </div>
+
+    <!-- Durum Sekmeleri (Yatay Kaydırılabilir) -->
+    <div class="overflow-x-auto hide-scrollbar border-b border-gray-800 bg-dark sticky top-[68px] z-10">
+        <div class="flex px-2 w-max" id="status-tabs"></div>
+    </div>
+
+    <!-- Medya Listesi -->
+    <main class="p-4 flex flex-col gap-4" id="media-list"></main>
+
+    <!-- İçerik Ekleme / Düzenleme Modalı -->
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50 p-4">
+        <div class="bg-card w-full max-w-md rounded-xl p-5 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <h2 id="modal-title" class="text-xl font-bold mb-4 text-white">İçerik Ekle</h2>
+            
+            <form id="media-form" class="flex flex-col gap-3">
+                <input type="hidden" id="edit-id">
+                
+                <div class="flex gap-2">
+                    <div class="w-1/2">
+                        <label class="text-xs text-gray-400 mb-1 block">Kategori</label>
+                        <select id="category" class="w-full bg-dark border border-gray-700 rounded p-2.5 text-white focus:outline-none focus:border-primary text-sm" onchange="updateFormFields()"></select>
+                    </div>
+                    
+                    <div class="w-1/2">
+                        <label class="text-xs text-gray-400 mb-1 block">Durum</label>
+                        <select id="status" class="w-full bg-dark border border-gray-700 rounded p-2.5 text-white focus:outline-none focus:border-primary text-sm"></select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs text-gray-400 mb-1 block" id="title-label">İçerik Adı</label>
+                    <input type="text" id="title" placeholder="İsim / Başlık" required class="w-full bg-dark border border-gray-700 rounded p-2.5 text-white focus:outline-none focus:border-primary text-sm">
+                </div>
+
+                <div id="project-program-field" class="hidden">
+                    <label class="text-xs text-gray-400 mb-1 block">Hangi Program ile Çizimi Yapıldı?</label>
+                    <input type="text" id="projectProgram" placeholder="Örn: AutoCAD, SketchUp vb." class="w-full bg-dark border border-gray-700 rounded p-2.5 text-white focus:outline-none focus:border-primary text-sm">
+                </div>
+
+                <div id="platform-container">
+                    <label class="text-xs text-gray-400 mb-1 block" id="platform-label">Platform / Kaynak</label>
+                    <input type="text" id="platform" placeholder="Örn: Netflix, Youtube vb." class="w-full bg-dark border border-gray-700 rounded p-2.5 text-white focus:outline-none focus:border-primary text-sm">
+                </div>
+
+                <div class="flex gap-2">
+                    <div class="w-1/2">
+                        <label class="text-xs text-gray-400 mb-1 block">Başlangıç Tarihi</label>
+                        <input type="date" id="startDate" class="w-full bg-dark border border-gray-700 rounded p-2 text-white focus:outline-none focus:border-primary text-sm">
+                    </div>
+                    <div class="w-1/2">
+                        <label class="text-xs text-gray-400 mb-1 block">Bitiş Tarihi</label>
+                        <input type="date" id="endDate" class="w-full bg-dark border border-gray-700 rounded p-2 text-white focus:outline-none focus:border-primary text-sm">
+                    </div>
+                </div>
+
+                <!-- Bildirim ve Hatırlatıcı Ayarları -->
+                <div class="bg-darker p-3 rounded-lg border border-gray-800 flex flex-col gap-2">
+                    <label class="text-xs text-yellow-400 font-semibold flex items-center gap-1.5">
+                        <i class="fas fa-bell"></i> Hatırlatıcı Bildirim Ayarla
+                    </label>
+                    <div class="flex gap-2">
+                        <div class="w-1/2">
+                            <label class="text-[11px] text-gray-400 mb-1 block">Hatırlatma Saati</label>
+                            <input type="time" id="reminderTime" class="w-full bg-dark border border-gray-700 rounded p-2 text-white text-sm focus:outline-none focus:border-primary">
+                        </div>
+                        <div class="w-1/2">
+                            <label class="text-[11px] text-gray-400 mb-1 block">Tekrar Sıklığı</label>
+                            <select id="reminderRepeat" class="w-full bg-dark border border-gray-700 rounded p-2 text-white text-sm focus:outline-none focus:border-primary">
+                                <option value="none">Yok (Tek Sefer)</option>
+                                <option value="daily">Günlük</option>
+                                <option value="weekly">Haftalık</option>
+                                <option value="monthly">Aylık</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="education-fields" class="flex gap-2 hidden">
+                    <div class="w-1/2">
+                        <label class="text-xs text-gray-400 mb-1 block">Eğitim Saati</label>
+                        <input type="text" id="eduHours" placeholder="Örn: 6 Saat" class="w-full bg-dark border border-gray-700 rounded p-2.5 text-white focus:outline-none focus:border-primary text-sm">
+                    </div>
+                    <div class="w-1/2">
+                        <label class="text-xs text-gray-400 mb-1 block">Ders Sayısı</label>
+                        <input type="number" id="eduLessons" placeholder="Örn: 12" class="w-full bg-dark border border-gray-700 rounded p-2.5 text-white focus:outline-none focus:border-primary text-sm">
+                    </div>
+                </div>
+
+                <div id="project-desc-field" class="hidden">
+                    <label class="text-xs text-gray-400 mb-1 block">Açıklama</label>
+                    <textarea id="projectDesc" placeholder="Proje açıklaması..." rows="2" class="w-full bg-dark border border-gray-700 rounded p-2.5 text-white focus:outline-none focus:border-primary resize-none text-sm"></textarea>
+                </div>
+
+                <div>
+                    <label class="text-xs text-gray-400 mb-1 block">Bağlantı Linki</label>
+                    <input type="url" id="linkUrl" placeholder="https://..." class="w-full bg-dark border border-gray-700 rounded p-2.5 text-white focus:outline-none focus:border-primary text-sm">
+                </div>
+
+                <div class="relative">
+                    <label class="text-xs text-gray-400 mb-1 block">İnceleme / Notlar</label>
+                    <textarea id="review" placeholder="İnceleme / Notlar (Max 140 karakter)" maxlength="140" rows="3" class="w-full bg-dark border border-gray-700 rounded p-2.5 text-white focus:outline-none focus:border-primary resize-none text-sm"></textarea>
+                    <div id="char-count" class="text-xs text-gray-400 text-right mt-1">0/140</div>
+                </div>
+
+                <div class="flex justify-end gap-2 mt-2">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 rounded text-gray-300 hover:bg-gray-800 transition text-sm">İptal</button>
+                    <button type="submit" class="px-4 py-2 rounded bg-primary text-white hover:bg-blue-600 transition text-sm">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Özel Onay Modalı -->
+    <div id="confirm-modal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50 p-4">
+        <div class="bg-card w-full max-w-sm rounded-xl p-5 shadow-2xl text-center">
+            <h3 class="text-lg font-bold text-white mb-2">İçeriği Sil</h3>
+            <p class="text-sm text-gray-400 mb-4">Bu içeriği silmek istediğine emin misin?</p>
+            <div class="flex justify-center gap-3">
+                <button onclick="closeConfirmModal()" class="px-4 py-2 rounded bg-gray-800 text-gray-300 hover:bg-gray-700 transition text-sm">İptal</button>
+                <button id="confirm-yes-btn" class="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-500 transition text-sm">Sil</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const categories = [
+            { name: 'Tümü', icon: 'fa-layer-group' },
+            { name: 'Proje', icon: 'fa-compass-drafting' },
+            { name: 'Film', icon: 'fa-film' },
+            { name: 'Dizi', icon: 'fa-tv' },
+            { name: 'Belgesel', icon: 'fa-video' },
+            { name: 'Tiyatro', icon: 'fa-masks-theater' },
+            { name: 'Stand-up', icon: 'fa-microphone-lines' },
+            { name: 'Podcast', icon: 'fa-podcast' },
+            { name: 'YouTube', icon: 'fa-brands fa-youtube' },
+            { name: 'Kitap', icon: 'fa-book' },
+            { name: 'Eğitim', icon: 'fa-graduation-cap' },
+            { name: 'Makale', icon: 'fa-newspaper' }
+        ];
+
+        const statuses = ['Tümü', 'Başlanacak', 'Devam Ediyor', 'Bitirildi', 'İstek Listesi', 'Ödünç Verildi'];
+        
+        let mediaData = JSON.parse(localStorage.getItem('stackData')) || [];
+        let goalsData = JSON.parse(localStorage.getItem('stackCustomGoals')) || [];
+        let journalData = JSON.parse(localStorage.getItem('stackJournal')) || [];
+
+        let currentCategory = 'Tümü';
+        let currentStatus = 'Tümü';
+        let deleteTargetId = null;
+        let currentUser = localStorage.getItem('stackUser') || null;
+        let calendarDate = new Date();
+
+        function init() {
+            checkAuth();
+            requestNotificationPermission();
+            renderCategories();
+            renderStatuses();
+            renderList();
+            renderGoals();
+            
+            // Her dakika bildirim kontrolü yap
+            setInterval(checkReminders, 60000);
+
+            const reviewInput = document.getElementById('review');
+            const charCount = document.getElementById('char-count');
+            reviewInput.addEventListener('input', () => {
+                charCount.textContent = `${reviewInput.value.length}/140`;
+            });
+
+            document.getElementById('auth-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const username = document.getElementById('username-input').value.trim();
+                if(username) {
+                    currentUser = username;
+                    localStorage.setItem('stackUser', currentUser);
+                    checkAuth();
+                    renderCategories();
+                    renderList();
+                }
+            });
+
+            document.getElementById('goal-custom-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const newGoal = {
+                    id: Date.now().toString(),
+                    year: document.getElementById('g-year').value,
+                    title: document.getElementById('g-title').value,
+                    tasks: []
+                };
+
+                goalsData.push(newGoal);
+                localStorage.setItem('stackCustomGoals', JSON.stringify(goalsData));
+                renderGoals();
+                closeGoalAddModal();
+                document.getElementById('goal-custom-form').reset();
+            });
+
+            document.getElementById('journal-custom-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const dateVal = document.getElementById('j-date').value;
+                const newJournal = {
+                    id: Date.now().toString(),
+                    date: dateVal,
+                    title: document.getElementById('j-title').value,
+                    notes: document.getElementById('j-notes').value
+                };
+
+                const existingIdx = journalData.findIndex(j => j.date === dateVal);
+                if(existingIdx !== -1) {
+                    journalData[existingIdx] = newJournal;
+                } else {
+                    journalData.push(newJournal);
+                }
+
+                localStorage.setItem('stackJournal', JSON.stringify(journalData));
+                closeJournalAddModal();
+                renderCalendar();
+                openJournalModal();
+            });
+        }
+
+        function checkAuth() {
+            const authScreen = document.getElementById('auth-screen');
+            const userDisplay = document.getElementById('user-display');
+            if(!currentUser) {
+                authScreen.classList.remove('hidden');
+                authScreen.classList.add('flex');
+                userDisplay.classList.add('hidden');
+            } else {
+                authScreen.classList.add('hidden');
+                authScreen.classList.remove('flex');
+                userDisplay.textContent = currentUser;
+                userDisplay.classList.remove('hidden');
+            }
+        }
+
+        function logout() {
+            if(confirm('Çıkış yapmak istediğine emin misin?')) {
+                localStorage.removeItem('stackUser');
+                currentUser = null;
+                checkAuth();
+            }
+        }
+
+        function requestNotificationPermission() {
+            if ("Notification" in window && Notification.permission !== "granted") {
+                Notification.requestPermission();
+            }
+        }
+
+        function checkReminders() {
+            const now = new Date();
+            const currentDay = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+            const currentTime = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+            const currentDayOfWeek = now.getDay(); // 0: Pazar, 1: Pzt...
+            const currentDayOfMonth = now.getDate();
+
+            mediaData.forEach(item => {
+                if(!item.reminderTime) return;
+                
+                let shouldNotify = false;
+                if(item.reminderRepeat === 'none' && item.startDate === currentDay && item.reminderTime === currentTime) {
+                    shouldNotify = true;
+                } else if(item.reminderRepeat === 'daily' && item.reminderTime === currentTime) {
+                    shouldNotify = true;
+                } else if(item.reminderRepeat === 'weekly' && item.startDate) {
+                    const startD = new Date(item.startDate + 'T00:00:00');
+                    if(startD.getDay() === currentDayOfWeek && item.reminderTime === currentTime) {
+                        shouldNotify = true;
+                    }
+                } else if(item.reminderRepeat === 'monthly' && item.startDate) {
+                    const startD = new Date(item.startDate + 'T00:00:00');
+                    if(startD.getDate() === currentDayOfMonth && item.reminderTime === currentTime) {
+                        shouldNotify = true;
+                    }
+                }
+
+                if(shouldNotify) {
+                    triggerNotification(item.title, item.category);
+                }
+            });
+        }
+
+        function triggerNotification(title, category) {
+            if ("Notification" in window && Notification.permission === "granted") {
+                new Notification("Stack Hatırlatıcı", {
+                    body: `"${title}" (${category}) zamanı geldi!`
+                });
+            } else {
+                alert(`Hatırlatıcı: "${title}" (${category}) zamanı geldi!`);
+            }
+        }
+
+        function openGoalsModal() {
+            document.getElementById('goals-modal').classList.remove('hidden');
+            document.getElementById('goals-modal').classList.add('flex');
+            renderGoals();
+        }
+        function closeGoalsModal() {
+            document.getElementById('goals-modal').classList.add('hidden');
+            document.getElementById('goals-modal').classList.remove('flex');
+        }
+        function openGoalAddModal() {
+            document.getElementById('goal-add-modal').classList.remove('hidden');
+            document.getElementById('goal-add-modal').classList.add('flex');
+        }
+        function closeGoalAddModal() {
+            document.getElementById('goal-add-modal').classList.add('hidden');
+            document.getElementById('goal-add-modal').classList.remove('flex');
+        }
+
+        function toggleGoalCard(headerElement) {
+            const content = headerElement.nextElementSibling;
+            const chevron = headerElement.querySelector('.goal-chevron');
+            content.classList.toggle('hidden');
+            chevron.classList.toggle('rotate-90');
+        }
+
+        function deleteGoal(id) {
+            if(confirm('Bu hedef grubunu silmek istediğine emin misin?')) {
+                goalsData = goalsData.filter(g => g.id !== id);
+                localStorage.setItem('stackCustomGoals', JSON.stringify(goalsData));
+                renderGoals();
+            }
+        }
+
+        function addTaskToGoal(goalId) {
+            const input = document.getElementById(`task-input-${goalId}`);
+            const taskText = input.value.trim();
+            if(!taskText) return;
+
+            const goal = goalsData.find(g => g.id === goalId);
+            if(goal) {
+                if(!goal.tasks) goal.tasks = [];
+                goal.tasks.push({ id: Date.now().toString(), text: taskText, completed: false });
+                localStorage.setItem('stackCustomGoals', JSON.stringify(goalsData));
+                renderGoals();
+            }
+        }
+
+        function toggleTask(goalId, taskId) {
+            const goal = goalsData.find(g => g.id === goalId);
+            if(goal && goal.tasks) {
+                const task = goal.tasks.find(t => t.id === taskId);
+                if(task) {
+                    task.completed = !task.completed;
+                    localStorage.setItem('stackCustomGoals', JSON.stringify(goalsData));
+                    renderGoals();
+                }
+            }
+        }
+
+        function deleteTask(goalId, taskId) {
+            const goal = goalsData.find(g => g.id === goalId);
+            if(goal && goal.tasks) {
+                goal.tasks = goal.tasks.filter(t => t.id !== taskId);
+                localStorage.setItem('stackCustomGoals', JSON.stringify(goalsData));
+                renderGoals();
+            }
+        }
+
+        function renderGoals() {
+            const container = document.getElementById('goals-list-container');
+            container.innerHTML = '';
+            if(goalsData.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-500 py-6">Henüz eklenmiş bir hedef bulunmuyor.</div>';
+                return;
+            }
+            goalsData.slice().reverse().forEach(goal => {
+                const div = document.createElement('div');
+                div.className = 'bg-darker rounded-xl border border-gray-800 overflow-hidden mb-2';
+                
+                let tasksHTML = '';
+                if(goal.tasks && goal.tasks.length > 0) {
+                    goal.tasks.forEach(task => {
+                        tasksHTML += `
+                            <div class="flex items-center justify-between bg-dark p-2 rounded border border-gray-800 mb-1">
+                                <label class="flex items-center gap-2 cursor-pointer flex-1 pr-2">
+                                    <input type="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask('${goal.id}', '${task.id}')" class="rounded bg-dark border-gray-700 text-primary focus:ring-0">
+                                    <span class="text-xs ${task.completed ? 'line-through text-gray-500' : 'text-gray-200'}">${task.text}</span>
+                                </label>
+                                <button onclick="deleteTask('${goal.id}', '${task.id}')" class="text-gray-500 hover:text-red-400 p-1"><i class="fas fa-trash-alt text-[10px]"></i></button>
+                            </div>
+                        `;
+                    });
+                } else {
+                    tasksHTML = '<p class="text-gray-500 text-xs italic mb-2">Henüz görev eklenmemiş.</p>';
+                }
+
+                div.innerHTML = `
+                    <div class="p-3.5 cursor-pointer select-none flex justify-between items-center bg-darker hover:bg-gray-850 transition" onclick="toggleGoalCard(this)">
+                        <div class="flex items-center gap-2.5 pr-4">
+                            <i class="fas fa-chevron-right text-xs text-gray-500 transition-transform duration-200 goal-chevron"></i>
+                            <h3 class="font-bold text-white text-sm">${goal.year} - ${goal.title}</h3>
+                        </div>
+                        <div onclick="event.stopPropagation()">
+                            <button onclick="deleteGoal('${goal.id}')" class="text-gray-500 hover:text-red-400 p-1 text-xs transition"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                    </div>
+                    <div class="hidden px-4 pb-4 border-t border-gray-800 pt-3 text-xs text-gray-300">
+                        <div class="flex flex-col gap-1.5 mb-3">
+                            ${tasksHTML}
+                        </div>
+                        <div class="flex gap-2">
+                            <input type="text" id="task-input-${goal.id}" placeholder="Yeni görev ekle..." class="w-full bg-dark border border-gray-700 rounded p-1.5 text-white text-xs focus:outline-none focus:border-primary">
+                            <button onclick="addTaskToGoal('${goal.id}')" class="bg-primary text-white px-3 py-1.5 rounded text-xs font-semibold hover:bg-blue-600 transition whitespace-nowrap"><i class="fas fa-plus"></i> Ekle</button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function openJournalModal() {
+            document.getElementById('journal-modal').classList.remove('hidden');
+            document.getElementById('journal-modal').classList.add('flex');
+            renderCalendar();
+        }
+        function closeJournalModal() {
+            document.getElementById('journal-modal').classList.add('hidden');
+            document.getElementById('journal-modal').classList.remove('flex');
+        }
+
+        function changeMonth(direction) {
+            calendarDate.setMonth(calendarDate.getMonth() + direction);
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const grid = document.getElementById('calendar-grid');
+            const monthYearLabel = document.getElementById('calendar-month-year');
+            grid.innerHTML = '';
+
+            const year = calendarDate.getFullYear();
+            const month = calendarDate.getMonth();
+
+            const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+            monthYearLabel.textContent = `${monthNames[month]} ${year}`;
+
+            const firstDayIndex = new Date(year, month, 1).getDay();
+            const adjustedFirstDay = (firstDayIndex === 0) ? 6 : firstDayIndex - 1;
+            const totalDays = new Date(year, month + 1, 0).getDate();
+
+            for(let i = 0; i < adjustedFirstDay; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = 'h-24 bg-dark/40 rounded-lg border border-gray-800/40 opacity-30';
+                grid.appendChild(emptyCell);
+            }
+
+            for(let day = 1; day <= totalDays; day++) {
+                const cellDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const journalEntry = journalData.find(j => j.date === cellDateStr);
+
+                const cell = document.createElement('div');
+                cell.className = `h-24 bg-dark rounded-lg border p-1.5 flex flex-col justify-between transition cursor-pointer overflow-hidden ${journalEntry ? 'border-primary/60 bg-blue-950/20 hover:bg-blue-950/40' : 'border-gray-800 hover:border-gray-700'}`;
+                
+                cell.onclick = () => {
+                    if(journalEntry) {
+                        openJournalView(journalEntry);
+                    } else {
+                        openJournalAddModalForDate(cellDateStr);
+                    }
+                };
+
+                let contentHTML = `<span class="text-xs font-bold ${journalEntry ? 'text-primary' : 'text-gray-400'}">${day}</span>`;
+                
+                if(journalEntry) {
+                    contentHTML += `
+                        <div class="mt-1 bg-primary/20 border border-primary/40 rounded p-1 text-[10px] text-white overflow-hidden">
+                            <p class="font-semibold truncate">${journalEntry.title}</p>
+                        </div>
+                    `;
+                }
+
+                cell.innerHTML = contentHTML;
+                grid.appendChild(cell);
+            }
+        }
+
+        function openJournalAddModalForDate(dateStr) {
+            closeJournalModal();
+            document.getElementById('journal-add-modal').classList.remove('hidden');
+            document.getElementById('journal-add-modal').classList.add('flex');
+            document.getElementById('journal-add-title').textContent = `${dateStr} - Günlük Ekle`;
+            document.getElementById('j-date').value = dateStr;
+            document.getElementById('j-title').value = '';
+            document.getElementById('j-notes').value = '';
+        }
+
+        function closeJournalAddModal() {
+            document.getElementById('journal-add-modal').classList.add('hidden');
+            document.getElementById('journal-add-modal').classList.remove('flex');
+            openJournalModal();
+        }
+
+        function openJournalView(entry) {
+            closeJournalModal();
+            document.getElementById('journal-view-modal').classList.remove('hidden');
+            document.getElementById('journal-view-modal').classList.add('flex');
+            
+            document.getElementById('view-j-date').textContent = entry.date;
+            document.getElementById('view-j-title').textContent = entry.title;
+            document.getElementById('view-j-notes').textContent = entry.notes;
+            
+            document.getElementById('delete-journal-btn').setAttribute('onclick', `deleteJournalEntry('${entry.id}')`);
+        }
+
+        function closeJournalViewModal() {
+            document.getElementById('journal-view-modal').classList.add('hidden');
+            document.getElementById('journal-view-modal').classList.remove('flex');
+            openJournalModal();
+        }
+
+        function deleteJournalEntry(id) {
+            if(confirm('Bu günlüğü silmek istediğine emin misin?')) {
+                journalData = journalData.filter(j => j.id !== id);
+                localStorage.setItem('stackJournal', JSON.stringify(journalData));
+                closeJournalViewModal();
+                openJournalModal();
+            }
+        }
+
+        function renderCategories() {
+            const container = document.getElementById('category-filters');
+            const select = document.getElementById('category');
+            container.innerHTML = '';
+            select.innerHTML = '';
+            
+            categories.forEach(cat => {
+                const count = cat.name === 'Tümü' 
+                    ? mediaData.length 
+                    : mediaData.filter(i => i.category === cat.name).length;
+
+                const btn = document.createElement('button');
+                btn.className = `w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition font-medium ${currentCategory === cat.name ? 'bg-primary text-white' : 'bg-card text-gray-300 hover:bg-gray-800'}`;
+                btn.innerHTML = `
+                    <div class="flex items-center gap-2.5">
+                        <i class="fas ${cat.icon} w-4 text-center"></i>
+                        <span>${cat.name}</span>
+                    </div>
+                    <span class="text-xs px-2 py-0.5 rounded-full ${currentCategory === cat.name ? 'bg-blue-700 text-white' : 'bg-darker text-gray-400'}">${count}</span>
+                `;
+                btn.onclick = () => { currentCategory = cat.name; renderCategories(); renderList(); };
+                container.appendChild(btn);
+
+                if(cat.name !== 'Tümü') {
+                    const option = document.createElement('option');
+                    option.value = cat.name;
+                    option.textContent = cat.name;
+                    select.appendChild(option);
+                }
+            });
+        }
+
+        function renderStatuses() {
+            const container = document.getElementById('status-tabs');
+            const select = document.getElementById('status');
+            container.innerHTML = '';
+            select.innerHTML = '';
+
+            statuses.forEach(stat => {
+                const btn = document.createElement('button');
+                btn.className = `whitespace-nowrap px-4 py-3 text-sm font-medium transition border-b-2 ${currentStatus === stat ? 'border-primary text-primary' : 'border-transparent text-gray-400 hover:text-gray-200'}`;
+                btn.textContent = stat;
+                btn.onclick = () => { currentStatus = stat; renderStatuses(); renderList(); };
+                container.appendChild(btn);
+
+                if(stat !== 'Tümü') {
+                    const option = document.createElement('option');
+                    option.value = stat;
+                    option.textContent = stat;
+                    select.appendChild(option);
+                }
+            });
+        }
+
+        function updateFormFields() {
+            const cat = document.getElementById('category').value;
+            const eduFields = document.getElementById('education-fields');
+            const projProgramField = document.getElementById('project-program-field');
+            const projDescField = document.getElementById('project-desc-field');
+            const platformContainer = document.getElementById('platform-container');
+            const titleLabel = document.getElementById('title-label');
+
+            eduFields.classList.add('hidden');
+            projProgramField.classList.add('hidden');
+            projDescField.classList.add('hidden');
+            platformContainer.classList.remove('hidden');
+            titleLabel.textContent = 'İçerik Adı';
+
+            if (cat === 'Eğitim') {
+                eduFields.classList.remove('hidden');
+            } else if (cat === 'Proje') {
+                projProgramField.classList.remove('hidden');
+                projDescField.classList.remove('hidden');
+                platformContainer.classList.add('hidden');
+                titleLabel.textContent = 'Proje İsmi';
+            }
+        }
+
+        function renderList() {
+            const container = document.getElementById('media-list');
+            container.innerHTML = '';
+
+            const filtered = mediaData.filter(item => {
+                const catMatch = currentCategory === 'Tümü' || item.category === currentCategory;
+                const statMatch = currentStatus === 'Tümü' || item.status === currentStatus;
+                return catMatch && statMatch;
+            });
+
+            if(filtered.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-500 py-10 mt-10">Buralar henüz boş. Yeni içerik ekleyebilirsin!</div>';
+                return;
+            }
+
+            filtered.slice().reverse().forEach((item) => {
+                let statusColor = 'text-gray-400';
+                if(item.status === 'Bitirildi') statusColor = 'text-green-400';
+                if(item.status === 'Devam Ediyor') statusColor = 'text-yellow-400';
+                if(item.status === 'Başlanacak') statusColor = 'text-blue-400';
+                if(item.status === 'Ödünç Verildi') statusColor = 'text-purple-400';
+
+                const card = document.createElement('div');
+                card.className = 'bg-card rounded-xl border border-gray-800 shadow-sm overflow-hidden';
+                
+                let detailsHTML = '';
+                if(item.category === 'Eğitim') {
+                    detailsHTML = `
+                        <div class="grid grid-cols-2 gap-2 text-xs bg-darker p-3 rounded-lg border border-gray-800 mt-3 text-gray-300">
+                            <div><span class="text-gray-500">Kaynak:</span> ${item.platform || '-'}</div>
+                            <div><span class="text-gray-500">Eğitim Saati:</span> ${item.eduHours || '-'}</div>
+                            <div><span class="text-gray-500">Ders Sayısı:</span> ${item.eduLessons || '-'}</div>
+                            <div><span class="text-gray-500">Başlangıç:</span> ${item.startDate || '-'}</div>
+                            <div><span class="text-gray-500">Bitiş:</span> ${item.endDate || '-'}</div>
+                        </div>
+                    `;
+                } else if(item.category === 'Proje') {
+                    detailsHTML = `
+                        <div class="grid grid-cols-2 gap-2 text-xs bg-darker p-3 rounded-lg border border-gray-800 mt-3 text-gray-300">
+                            <div><span class="text-gray-500">Çizim Programı:</span> ${item.projectProgram || '-'}</div>
+                            <div><span class="text-gray-500">Başlangıç:</span> ${item.startDate || '-'}</div>
+                            <div><span class="text-gray-500">Bitiş:</span> ${item.endDate || '-'}</div>
+                        </div>
+                        ${item.projectDesc ? `<p class="text-xs text-gray-300 bg-darker/60 p-2.5 rounded-lg border border-gray-800/80 mt-2"><span class="text-gray-500">Açıklama:</span> ${item.projectDesc}</p>` : ''}
+                    `;
+                } else {
+                    detailsHTML = `
+                        <div class="grid grid-cols-2 gap-2 text-xs bg-darker p-3 rounded-lg border border-gray-800 mt-3 text-gray-300">
+                            <div><span class="text-gray-500">Platform/Kaynak:</span> ${item.platform || '-'}</div>
+                            <div><span class="text-gray-500">Başlangıç:</span> ${item.startDate || '-'}</div>
+                            <div><span class="text-gray-500">Bitiş:</span> ${item.endDate || '-'}</div>
+                        </div>
+                    `;
+                }
+
+                if(item.reminderTime) {
+                    let repeatText = item.reminderRepeat === 'daily' ? 'Günlük' : (item.reminderRepeat === 'weekly' ? 'Haftalık' : (item.reminderRepeat === 'monthly' ? 'Aylık' : 'Tek Sefer'));
+                    detailsHTML += `
+                        <div class="mt-2 text-xs bg-yellow-500/10 border border-yellow-500/30 p-2 rounded text-yellow-400 flex items-center gap-1.5">
+                            <i class="fas fa-bell"></i> Hatırlatıcı: ${item.reminderTime} (${repeatText})
+                        </div>
+                    `;
+                }
+
+                if(item.linkUrl) {
+                    detailsHTML += `
+                        <div class="mt-2">
+                            <a href="${item.linkUrl}" target="_blank" class="inline-flex items-center gap-1.5 text-xs text-primary hover:underline bg-blue-950/40 px-2.5 py-1 rounded border border-blue-900/50">
+                                <i class="fas fa-external-link-alt"></i> Bağlantıya Git
+                            </a>
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <div class="p-4 cursor-pointer select-none flex justify-between items-center bg-card hover:bg-gray-850 transition" onclick="toggleCard(this)">
+                        <div class="flex items-center gap-3 pr-4">
+                            <i class="fas fa-chevron-right text-xs text-gray-500 transition-transform duration-200 chevron-icon"></i>
+                            <h3 class="text-base font-bold text-white leading-tight">${item.title}</h3>
+                        </div>
+                        <div class="flex items-center gap-2" onclick="event.stopPropagation()">
+                            <button onclick="openModal('${item.id}')" class="text-gray-400 hover:text-blue-400 p-1.5"><i class="fas fa-pen text-xs"></i></button>
+                            <button onclick="confirmDelete('${item.id}')" class="text-gray-400 hover:text-red-400 p-1.5"><i class="fas fa-trash-alt text-xs"></i></button>
+                        </div>
+                    </div>
+                    <div class="card-content hidden px-4 pb-4 border-t border-gray-800/60 pt-3">
+                        <div class="flex gap-2 text-xs font-medium mb-2 flex-wrap">
+                            <span class="bg-darker px-2.5 py-1 rounded text-gray-300 border border-gray-700">${item.category}</span>
+                            <span class="bg-darker px-2.5 py-1 rounded ${statusColor} border border-gray-700">• ${item.status}</span>
+                        </div>
+                        ${detailsHTML}
+                        ${item.review ? `<p class="text-sm text-gray-400 italic break-words border-l-2 border-gray-700 pl-2 mt-3">"${item.review}"</p>` : ''}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function toggleCard(headerElement) {
+            const cardContent = headerElement.nextElementSibling;
+            const chevron = headerElement.querySelector('.chevron-icon');
+            cardContent.classList.toggle('hidden');
+            chevron.classList.toggle('rotate-90');
+        }
+
+        document.getElementById('media-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const editId = document.getElementById('edit-id').value;
+            
+            const itemData = {
+                id: editId ? editId : Date.now().toString(),
+                title: document.getElementById('title').value,
+                category: document.getElementById('category').value,
+                status: document.getElementById('status').value,
+                platform: document.getElementById('platform').value,
+                startDate: document.getElementById('startDate').value,
+                endDate: document.getElementById('endDate').value,
+                reminderTime: document.getElementById('reminderTime').value,
+                reminderRepeat: document.getElementById('reminderRepeat').value,
+                eduHours: document.getElementById('eduHours').value,
+                eduLessons: document.getElementById('eduLessons').value,
+                projectProgram: document.getElementById('projectProgram').value,
+                projectDesc: document.getElementById('projectDesc').value,
+                linkUrl: document.getElementById('linkUrl').value,
+                review: document.getElementById('review').value,
+                date: new Date().toISOString()
+            };
+
+            if (editId) {
+                const index = mediaData.findIndex(i => i.id === editId);
+                if (index !== -1) mediaData[index] = itemData;
+            } else {
+                mediaData.push(itemData);
+            }
+
+            saveData();
+            closeModal();
+            renderCategories();
+            renderList();
+        });
+
+        function confirmDelete(id) {
+            deleteTargetId = id;
+            document.getElementById('confirm-modal').classList.remove('hidden');
+            document.getElementById('confirm-modal').classList.add('flex');
+        }
+
+        document.getElementById('confirm-yes-btn').onclick = () => {
+            if(deleteTargetId) {
+                mediaData = mediaData.filter(item => item.id !== deleteTargetId);
+                saveData();
+                renderCategories();
+                renderList();
+            }
+            closeConfirmModal();
+        };
+
+        function closeConfirmModal() {
+            deleteTargetId = null;
+            document.getElementById('confirm-modal').classList.add('hidden');
+            document.getElementById('confirm-modal').classList.remove('flex');
+        }
+
+        function saveData() {
+            localStorage.setItem('stackData', JSON.stringify(mediaData));
+        }
+
+        function openModal(id = null) {
+            document.getElementById('modal').classList.remove('hidden');
+            document.getElementById('modal').classList.add('flex');
+            document.getElementById('media-form').reset();
+            document.getElementById('edit-id').value = '';
+            document.getElementById('char-count').textContent = '0/140';
+
+            if (id) {
+                document.getElementById('modal-title').textContent = 'İçeriği Düzenle';
+                const item = mediaData.find(i => i.id === id);
+                if (item) {
+                    document.getElementById('edit-id').value = item.id;
+                    document.getElementById('title').value = item.title;
+                    document.getElementById('category').value = item.category;
+                    document.getElementById('status').value = item.status;
+                    document.getElementById('platform').value = item.platform || '';
+                    document.getElementById('startDate').value = item.startDate || '';
+                    document.getElementById('endDate').value = item.endDate || '';
+                    document.getElementById('reminderTime').value = item.reminderTime || '';
+                    document.getElementById('reminderRepeat').value = item.reminderRepeat || 'none';
+                    document.getElementById('eduHours').value = item.eduHours || '';
+                    document.getElementById('eduLessons').value = item.eduLessons || '';
+                    document.getElementById('projectProgram').value = item.projectProgram || '';
+                    document.getElementById('projectDesc').value = item.projectDesc || '';
+                    document.getElementById('linkUrl').value = item.linkUrl || '';
+                    document.getElementById('review').value = item.review || '';
+                    document.getElementById('char-count').textContent = `${(item.review || '').length}/140`;
+                }
+            } else {
+                document.getElementById('modal-title').textContent = 'İçerik Ekle';
+            }
+            updateFormFields();
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.add('hidden');
+            document.getElementById('modal').classList.remove('flex');
+        }
+
+        window.onload = init;
+    </script>
+
+    <!-- Android (Capacitor) yerel bildirim köprüsü: tarayıcıda hiçbir şey yapmaz -->
+    <script>
+    (function () {
+        const cap = window.Capacitor;
+        if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) return;
+        const LN = cap.Plugins && cap.Plugins.LocalNotifications;
+        if (!LN) return;
+
+        // Tarayıcı tabanlı kontrolleri devre dışı bırak (çift bildirim olmasın)
+        checkReminders = function () {};
+        requestNotificationPermission = function () {};
+
+        function nid(id) { return parseInt(String(id).slice(-9), 10) || 1; }
+
+        function nextAt(item) {
+            const parts = item.reminderTime.split(':').map(Number);
+            const now = new Date();
+            let d;
+            if (item.reminderRepeat === 'daily' || !item.startDate) {
+                d = new Date(); d.setHours(parts[0], parts[1], 0, 0);
+            } else {
+                const s = item.startDate.split('-').map(Number);
+                d = new Date(s[0], s[1] - 1, s[2], parts[0], parts[1], 0);
+            }
+            if (item.reminderRepeat === 'none') return (item.startDate && d > now) ? d : null;
+            if (item.reminderRepeat !== 'daily' && !item.startDate) return null;
+            let guard = 0;
+            while (d <= now && guard++ < 5000) {
+                if (item.reminderRepeat === 'daily') d.setDate(d.getDate() + 1);
+                else if (item.reminderRepeat === 'weekly') d.setDate(d.getDate() + 7);
+                else d.setMonth(d.getMonth() + 1);
+            }
+            return d;
+        }
+
+        async function syncNativeReminders() {
+            try {
+                let perm = await LN.checkPermissions();
+                if (perm.display !== 'granted') perm = await LN.requestPermissions();
+                if (perm.display !== 'granted') return;
+
+                const pending = await LN.getPending();
+                if (pending.notifications && pending.notifications.length) {
+                    await LN.cancel({ notifications: pending.notifications });
+                }
+
+                const list = [];
+                mediaData.forEach(item => {
+                    if (!item.reminderTime) return;
+                    const at = nextAt(item);
+                    if (!at) return;
+                    const n = {
+                        id: nid(item.id),
+                        title: 'Stack Hatırlatıcı',
+                        body: '"' + item.title + '" (' + item.category + ') zamanı geldi!',
+                        schedule: { at: at, allowWhileIdle: true }
+                    };
+                    const every = { daily: 'day', weekly: 'week', monthly: 'month' }[item.reminderRepeat];
+                    if (every) { n.schedule.repeats = true; n.schedule.every = every; }
+                    list.push(n);
+                });
+                if (list.length) await LN.schedule({ notifications: list });
+            } catch (e) { console.error('Bildirim planlama hatası', e); }
+        }
+
+        const originalSave = saveData;
+        saveData = function () { originalSave(); syncNativeReminders(); };
+        window.addEventListener('load', function () { setTimeout(syncNativeReminders, 800); });
+    })();
+    </script>
+</body>
+</html>
